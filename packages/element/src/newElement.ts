@@ -26,6 +26,7 @@ import { normalizeText, measureText } from "./textMeasurements";
 import { wrapText } from "./textWrapping";
 
 import { isLineElement } from "./typeChecks";
+import { getTextMode, isLatexTextMode } from "./latex";
 
 import type {
   ExcalidrawElement,
@@ -49,6 +50,7 @@ import type {
   ExcalidrawElbowArrowElement,
   ExcalidrawLineElement,
 } from "./types";
+import type { TextMode } from "./latex";
 
 export type ElementConstructorOpts = MarkOptional<
   Omit<ExcalidrawGenericElement, "id" | "type" | "isDeleted" | "updated">,
@@ -247,16 +249,19 @@ export const newTextElement = (
     containerId?: ExcalidrawTextContainer["id"] | null;
     lineHeight?: ExcalidrawTextElement["lineHeight"];
     autoResize?: ExcalidrawTextElement["autoResize"];
+    textMode?: TextMode;
   } & ElementConstructorOpts,
 ): NonDeleted<ExcalidrawTextElement> => {
   const fontFamily = opts.fontFamily || DEFAULT_FONT_FAMILY;
   const fontSize = opts.fontSize || DEFAULT_FONT_SIZE;
   const lineHeight = opts.lineHeight || getLineHeight(fontFamily);
   const text = normalizeText(opts.text);
+  const textMode = opts.textMode ?? "plain";
   const metrics = measureText(
     text,
     getFontString({ fontFamily, fontSize }),
     lineHeight,
+    textMode,
   );
   const textAlign = opts.textAlign || DEFAULT_TEXT_ALIGN;
   const verticalAlign = opts.verticalAlign || DEFAULT_VERTICAL_ALIGN;
@@ -272,6 +277,7 @@ export const newTextElement = (
     fontFamily,
     textAlign,
     verticalAlign,
+    ...(textMode === "latex" ? { textMode } : {}),
     x: opts.x - offsets.x,
     y: opts.y - offsets.y,
     width: metrics.width,
@@ -304,6 +310,7 @@ const getAdjustedDimensions = (
     nextText,
     getFontString(element),
     element.lineHeight,
+    getTextMode(element),
   );
 
   // wrapped text
@@ -324,6 +331,7 @@ const getAdjustedDimensions = (
       element.text,
       getFontString(element),
       element.lineHeight,
+      getTextMode(element),
     );
     const offsets = getTextElementPositionOffsets(element, {
       width: nextWidth - prevMetrics.width,
@@ -426,7 +434,10 @@ export const refreshTextDimensions = (
   if (textElement.isDeleted) {
     return;
   }
-  if (container || !textElement.autoResize) {
+  if (
+    !isLatexTextMode(getTextMode(textElement)) &&
+    (container || !textElement.autoResize)
+  ) {
     text = wrapText(
       text,
       getFontString(textElement),

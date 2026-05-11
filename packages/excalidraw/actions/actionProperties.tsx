@@ -40,7 +40,12 @@ import { getArrowheadForPicker } from "@excalidraw/element";
 
 import {
   getBoundTextElement,
+  formatLatexText,
+  getLatexPanelMode,
+  getLatexPanelSource,
+  getTextMode,
   redrawTextBoundingBox,
+  type LatexPanelMode,
 } from "@excalidraw/element";
 
 import {
@@ -1287,6 +1292,169 @@ export const actionChangeFontFamily = register<{
           }}
         />
       </>
+    );
+  },
+});
+
+type TextModeUpdate =
+  | LatexPanelMode
+  | {
+      mode: LatexPanelMode;
+      source: string;
+    };
+
+export const actionChangeTextMode = register<TextModeUpdate>({
+  name: "changeTextMode",
+  label: "labels.latex",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    const mode = typeof value === "object" ? value.mode : value;
+
+    if (!mode) {
+      return false;
+    }
+
+    const sourceOverride = typeof value === "object" ? value.source : null;
+
+    return {
+      elements: changeProperty(
+        elements,
+        appState,
+        (oldElement) => {
+          if (isTextElement(oldElement)) {
+            const currentMode = getLatexPanelMode(
+              getTextMode(oldElement),
+              oldElement.originalText,
+            );
+            const source =
+              sourceOverride ??
+              getLatexPanelSource(currentMode, oldElement.originalText);
+            const nextOriginalText =
+              mode === "off" && currentMode === "off"
+                ? oldElement.originalText
+                : formatLatexText(mode, source);
+            const newElement: ExcalidrawTextElement = newElementWith(
+              oldElement,
+              {
+                originalText: nextOriginalText,
+                text: nextOriginalText,
+                textMode: mode === "off" ? undefined : "latex",
+              },
+              mode === "off" && currentMode !== "off",
+            );
+
+            redrawTextBoundingBox(
+              newElement,
+              app.scene.getContainerElement(oldElement),
+              app.scene,
+            );
+            return newElement;
+          }
+
+          return oldElement;
+        },
+        true,
+      ),
+      appState: {
+        ...appState,
+        currentItemLatexMode: mode,
+      },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData, app, data }) => {
+    const elementsMap = app.scene.getNonDeletedElementsMap();
+    const { isCompact } = getStylesPanelInfo(app);
+    const latexMode = getFormValue(
+      elements,
+      app,
+      (element) => {
+        if (isTextElement(element)) {
+          return getLatexPanelMode(getTextMode(element), element.originalText);
+        }
+        const boundTextElement = getBoundTextElement(element, elementsMap);
+        if (boundTextElement) {
+          return getLatexPanelMode(
+            getTextMode(boundTextElement),
+            boundTextElement.originalText,
+          );
+        }
+        return null;
+      },
+      (element) =>
+        isTextElement(element) ||
+        getBoundTextElement(element, elementsMap) !== null,
+      (hasSelection) =>
+        hasSelection ? null : appState.currentItemLatexMode || "off",
+    );
+    const selectedTextElements = getSelectedElements(elements, appState, {
+      includeBoundTextElement: true,
+    }).filter(isTextElement);
+    const sourceTextElement =
+      (appState.editingTextElement &&
+        app.scene.getElement<ExcalidrawTextElement>(
+          appState.editingTextElement.id,
+        )) ||
+      (selectedTextElements.length === 1 ? selectedTextElements[0] : null);
+    const editableLatexMode =
+      latexMode && latexMode !== "off" ? latexMode : null;
+    const latexSource =
+      sourceTextElement && editableLatexMode
+        ? getLatexPanelSource(editableLatexMode, sourceTextElement.originalText)
+        : null;
+
+    return (
+      <fieldset>
+        <legend>{t("labels.latex")}</legend>
+        <div className="buttonList">
+          {(["off", "on", "math"] as const).map((mode) => (
+            <button
+              aria-pressed={latexMode === mode}
+              className={latexMode === mode ? "active" : ""}
+              key={mode}
+              onClick={() => {
+                withCaretPositionPreservation(
+                  () => updateData(mode),
+                  isCompact,
+                  !!appState.editingTextElement,
+                  data?.onPreventClose,
+                );
+              }}
+              type="button"
+            >
+              {t(
+                mode === "off"
+                  ? "labels.latexOff"
+                  : mode === "on"
+                  ? "labels.latexOn"
+                  : "labels.latexMath",
+              )}
+            </button>
+          ))}
+        </div>
+        {latexSource !== null ? (
+          <label className="latex-source-field">
+            <span className="visually-hidden">{t("labels.latexSource")}</span>
+            <input
+              aria-label={t("labels.latexSource")}
+              type="text"
+              value={latexSource}
+              onChange={(event) => {
+                withCaretPositionPreservation(
+                  () =>
+                    updateData({
+                      mode: editableLatexMode,
+                      source: event.target.value,
+                    }),
+                  isCompact,
+                  !!appState.editingTextElement,
+                  data?.onPreventClose,
+                );
+              }}
+            />
+          </label>
+        ) : null}
+      </fieldset>
     );
   },
 });

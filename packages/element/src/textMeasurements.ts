@@ -7,20 +7,29 @@ import {
   normalizeEOL,
 } from "@excalidraw/common";
 
+import { isLatexTextMode, measureLatex } from "./latex";
+
 import type { FontString, ExcalidrawTextElement } from "./types";
+import type { TextMode } from "./latex";
 
 export const measureText = (
   text: string,
   font: FontString,
   lineHeight: ExcalidrawTextElement["lineHeight"],
+  textMode: TextMode = "plain",
 ) => {
+  const fontSize = parseFloat(font);
+
+  if (isLatexTextMode(textMode)) {
+    return measureLatex(text, fontSize);
+  }
+
   const _text = text
     .split("\n")
     // replace empty lines with single space because leading/trailing empty
     // lines would be stripped from computation
     .map((x) => x || " ")
     .join("\n");
-  const fontSize = parseFloat(font);
   const height = getTextHeight(_text, fontSize, lineHeight);
   const width = getTextWidth(_text, font);
   return { width, height };

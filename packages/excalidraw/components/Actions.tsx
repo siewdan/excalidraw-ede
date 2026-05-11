@@ -228,6 +228,7 @@ export const SelectedShapeActions = ({
         <>
           <fieldset>{renderAction("changeFontFamily")}</fieldset>
           {renderAction("changeFontSize")}
+          {renderAction("changeTextMode")}
           {(appState.activeTool.type === "text" ||
             suppportsHorizontalAlign(targetElements, elementsMap)) &&
             renderAction("changeTextAlign")}
@@ -592,6 +593,9 @@ const CombinedTextProperties = ({
               {(appState.activeTool.type === "text" ||
                 targetElements.some(isTextElement)) &&
                 renderAction("changeFontSize")}
+              {(appState.activeTool.type === "text" ||
+                targetElements.some(isTextElement)) &&
+                renderAction("changeTextMode")}
               {(appState.activeTool.type === "text" ||
                 suppportsHorizontalAlign(targetElements, elementsMap)) &&
                 renderAction("changeTextAlign")}

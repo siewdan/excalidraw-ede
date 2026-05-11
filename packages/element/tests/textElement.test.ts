@@ -1,4 +1,4 @@
-import { getLineHeight } from "@excalidraw/common";
+import { getFontString, getLineHeight } from "@excalidraw/common";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 
 import { FONT_FAMILY, TEXT_ALIGN, VERTICAL_ALIGN } from "@excalidraw/common";
@@ -10,11 +10,28 @@ import {
   getBoundTextMaxHeight,
   computeBoundTextPosition,
 } from "../src/textElement";
-import { detectLineHeight, getLineHeightInPx } from "../src/textMeasurements";
+import {
+  detectLineHeight,
+  getLineHeightInPx,
+  measureText,
+} from "../src/textMeasurements";
 
 import type { ExcalidrawTextElementWithContainer } from "../src/types";
 
 describe("Test measureText", () => {
+  it("measures LaTeX formulas using MathJax dimensions", () => {
+    const lineHeight = getLineHeight(FONT_FAMILY.Virgil);
+    const metrics = measureText(
+      "$\\frac{a}{b}$",
+      getFontString({ fontFamily: FONT_FAMILY.Virgil, fontSize: 20 }),
+      lineHeight,
+      "latex",
+    );
+
+    expect(metrics.width).toBeGreaterThan(0);
+    expect(metrics.height).toBeGreaterThan(20);
+  });
+
   describe("Test getContainerCoords", () => {
     const params = { width: 200, height: 100, x: 10, y: 20 };
 

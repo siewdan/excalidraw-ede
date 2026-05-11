@@ -110,6 +110,25 @@ describe("exportToSvg", () => {
     );
   });
 
+  it("exports LaTeX text as embedded MathJax SVG", async () => {
+    const latexText = API.createElement({
+      type: "text",
+      text: "$\\frac{a}{b}$",
+      originalText: "$\\frac{a}{b}$",
+      textMode: "latex",
+    });
+
+    const svgElement = await exportUtils.exportToSvg(
+      [latexText],
+      DEFAULT_OPTIONS,
+      null,
+    );
+
+    const latexNode = svgElement.querySelector('[data-text-mode="latex"]');
+    expect(latexNode).not.toBeNull();
+    expect(latexNode?.querySelector("path")).not.toBeNull();
+  });
+
   it("with dark mode", async () => {
     const svgElement = await exportUtils.exportToSvg(
       ELEMENTS,

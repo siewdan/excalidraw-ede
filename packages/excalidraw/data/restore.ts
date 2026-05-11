@@ -398,6 +398,7 @@ export const restoreElement = (
         text,
         textAlign: element.textAlign || DEFAULT_TEXT_ALIGN,
         verticalAlign: element.verticalAlign || DEFAULT_VERTICAL_ALIGN,
+        ...(element.textMode === "latex" ? { textMode: "latex" as const } : {}),
         containerId: element.containerId ?? null,
         originalText: element.originalText || text,
         autoResize: element.autoResize ?? true,

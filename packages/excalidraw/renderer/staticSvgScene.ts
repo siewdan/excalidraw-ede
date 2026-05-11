@@ -18,6 +18,13 @@ import {
   createPlaceholderEmbeddableLabel,
   getEmbedLink,
 } from "@excalidraw/element";
+import {
+  createLatexSvgElement,
+  getLatexContentInsetY,
+  getTextMode,
+  isLatexTextMode,
+  renderLatexToSvg,
+} from "@excalidraw/element";
 import { LinearElementEditor } from "@excalidraw/element";
 import { getBoundTextElement, getContainerElement } from "@excalidraw/element";
 import { getLineHeightInPx } from "@excalidraw/element";
@@ -645,6 +652,57 @@ const renderElementToSvg = (
             offsetY || 0
           }) rotate(${degree} ${cx} ${cy})`,
         );
+
+        if (isLatexTextMode(getTextMode(element))) {
+          const rendered = renderLatexToSvg(
+            element.originalText || element.text,
+            element.fontSize,
+          );
+
+          if (rendered) {
+            const svg = createLatexSvgElement(svgRoot.ownerDocument, rendered);
+
+            if (svg) {
+              const horizontalOffset =
+                element.textAlign === "center"
+                  ? (element.width - rendered.width) / 2
+                  : element.textAlign === "right"
+                  ? element.width - rendered.width
+                  : 0;
+              const contentInsetY = getLatexContentInsetY(element.fontSize);
+              const contentHeight = rendered.height + contentInsetY * 2;
+              const verticalOffset =
+                element.verticalAlign === "middle"
+                  ? (element.height - contentHeight) / 2 + contentInsetY
+                  : element.verticalAlign === "bottom"
+                  ? element.height - contentHeight + contentInsetY
+                  : contentInsetY;
+
+              svg.setAttribute("x", `${horizontalOffset}`);
+              svg.setAttribute("y", `${verticalOffset}`);
+              svg.setAttribute(
+                "color",
+                renderConfig.theme === THEME.DARK
+                  ? applyDarkModeFilter(element.strokeColor)
+                  : element.strokeColor,
+              );
+              svg.setAttribute("data-text-mode", "latex");
+              node.appendChild(svg);
+
+              const g = maybeWrapNodesInFrameClipPath(
+                element,
+                root,
+                [node],
+                renderConfig.frameRendering,
+                elementsMap,
+              );
+
+              addToRoot(g || node, element);
+              break;
+            }
+          }
+        }
+
         const lines = element.text.replace(/\r\n?/g, "\n").split("\n");
         const lineHeightPx = getLineHeightInPx(
           element.fontSize,

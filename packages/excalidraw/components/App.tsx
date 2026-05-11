@@ -206,6 +206,10 @@ import {
   isMeasureTextSupported,
   normalizeText,
   measureText,
+  formatLatexText,
+  getLatexPanelMode,
+  getLatexPanelSource,
+  getNextLatexPanelMode,
   getLineHeightInPx,
   getApproxMinLineWidth,
   getApproxMinLineHeight,
@@ -262,6 +266,7 @@ import {
   getUncroppedWidthAndHeight,
   getActiveTextElement,
   isEligibleFrameChildType,
+  type LatexPanelMode,
 } from "@excalidraw/element";
 
 import type { GlobalPoint, LocalPoint, Radians } from "@excalidraw/math";
@@ -4774,6 +4779,30 @@ class App extends React.Component<AppProps, AppState> {
         });
       }
 
+      const isCtrlOrCmdKey =
+        (KEYS.CTRL_OR_CMD === "metaKey" && event.key === "Meta") ||
+        (KEYS.CTRL_OR_CMD === "ctrlKey" && event.key === "Control");
+
+      if (
+        this.state.activeTool.type === "text" &&
+        isCtrlOrCmdKey &&
+        !event.repeat &&
+        !event.shiftKey &&
+        !event.altKey &&
+        !isInputLike(event.target) &&
+        !this.state.editingTextElement &&
+        !this.state.newElement
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.setState((prevState) => ({
+          currentItemLatexMode: getNextLatexPanelMode(
+            prevState.currentItemLatexMode,
+          ),
+        }));
+        return;
+      }
+
       if (!isInputLike(event.target)) {
         if (
           (event.key === KEYS.ESCAPE || event.key === KEYS.ENTER) &&
@@ -5720,14 +5749,39 @@ class App extends React.Component<AppProps, AppState> {
     },
   ) {
     const elementsMap = this.scene.getElementsMapIncludingDeleted();
+    const initialLatexMode: LatexPanelMode = isExistingElement
+      ? getLatexPanelMode(element.textMode, element.originalText)
+      : this.state.currentItemLatexMode;
+    const getSceneOriginalText = (
+      textElement: ExcalidrawTextElement,
+      nextEditorText: string,
+    ) => {
+      const inferredLatexMode = getLatexPanelMode(
+        textElement.textMode,
+        textElement.originalText,
+      );
+      const latexMode =
+        textElement.textMode === "latex" && !textElement.originalText
+          ? this.state.currentItemLatexMode
+          : inferredLatexMode;
 
-    const updateElement = (nextOriginalText: string, isDeleted: boolean) => {
+      return latexMode === "off"
+        ? nextEditorText
+        : formatLatexText(latexMode, nextEditorText);
+    };
+
+    const updateElement = (nextEditorText: string, isDeleted: boolean) => {
       this.scene.replaceAllElements([
         // Not sure why we include deleted elements as well hence using deleted elements map
         ...this.scene.getElementsIncludingDeleted().map((_element) => {
           if (_element.id === element.id && isTextElement(_element)) {
+            const nextOriginalText = getSceneOriginalText(
+              _element,
+              nextEditorText,
+            );
             return newElementWith(_element, {
               originalText: nextOriginalText,
+              textMode: _element.textMode === "latex" ? "latex" : undefined,
               isDeleted: isDeleted ?? _element.isDeleted,
               // returns (wrapped) text and new dimensions
               ...refreshTextDimensions(
@@ -5816,7 +5870,19 @@ class App extends React.Component<AppProps, AppState> {
 
         this.focusContainer();
       }),
-      element,
+      element:
+        initialLatexMode === "math"
+          ? newElementWith(
+              element,
+              {
+                originalText: getLatexPanelSource(
+                  initialLatexMode,
+                  element.originalText,
+                ),
+              },
+              true,
+            )
+          : element,
       excalidrawContainer: this.excalidrawContainerRef.current,
       app: this,
       initialCaretSceneCoords,
@@ -5831,7 +5897,10 @@ class App extends React.Component<AppProps, AppState> {
 
     // do an initial update to re-initialize element position since we were
     // modifying element's x/y for sake of editor (case: syncing to remote)
-    updateElement(element.originalText, false);
+    updateElement(
+      getLatexPanelSource(initialLatexMode, element.originalText),
+      false,
+    );
   }
 
   private deselectElements() {
@@ -6311,6 +6380,7 @@ class App extends React.Component<AppProps, AppState> {
         roughness: this.state.currentItemRoughness,
         opacity: this.state.currentItemOpacity,
         text: "",
+        textMode: this.state.currentItemLatexMode === "off" ? "plain" : "latex",
         fontSize,
         fontFamily,
         textAlign: parentCenterPosition

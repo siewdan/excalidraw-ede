@@ -207,6 +207,12 @@ body.excalidraw-cursor-resize * {
       padding: 0;
       border: none;
     }
+
+    .latex-source-field input {
+      margin-top: 0.5rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
   }
 
   .divider {

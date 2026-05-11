@@ -27,6 +27,8 @@ import {
   getBoundTextElement,
   getBoundTextMaxHeight,
   getBoundTextMaxWidth,
+  getTextMode,
+  isLatexTextMode,
   redrawTextBoundingBox,
 } from "@excalidraw/element";
 
@@ -368,16 +370,15 @@ export const adjustBoundTextSize = (
   const maxWidth = getBoundTextMaxWidth(container, boundText);
   const maxHeight = getBoundTextMaxHeight(container, boundText);
 
-  const wrappedText = wrapText(
-    boundText.text,
-    getFontString(boundText),
-    maxWidth,
-  );
+  const wrappedText = isLatexTextMode(getTextMode(boundText))
+    ? boundText.text
+    : wrapText(boundText.text, getFontString(boundText), maxWidth);
 
   let metrics = measureText(
     wrappedText,
     getFontString(boundText),
     boundText.lineHeight,
+    getTextMode(boundText),
   );
 
   let nextFontSize = boundText.fontSize;
@@ -394,6 +395,7 @@ export const adjustBoundTextSize = (
       boundText.text,
       getFontString(_updatedTextElement),
       boundText.lineHeight,
+      getTextMode(boundText),
     );
   }
 

@@ -30,6 +30,7 @@ import {
   type ElementConstructorOpts,
 } from "./newElement";
 import { measureText, normalizeText } from "./textMeasurements";
+import { getTextMode } from "./latex";
 import { isArrowElement } from "./typeChecks";
 
 import { syncInvalidIndices } from "./fractionalIndex";
@@ -586,6 +587,7 @@ export const convertToExcalidrawElements = (
           normalizedText,
           getFontString({ fontFamily, fontSize }),
           lineHeight,
+          getTextMode(element),
         );
 
         excalidrawElement = newTextElement({

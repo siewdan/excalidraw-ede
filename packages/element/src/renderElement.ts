@@ -52,6 +52,13 @@ import {
   getBoundTextMaxHeight,
   getBoundTextMaxWidth,
 } from "./textElement";
+import {
+  drawLatexSvgToCanvas,
+  getLatexContentInsetY,
+  getTextMode,
+  isLatexTextMode,
+  renderLatexToSvg,
+} from "./latex";
 import { getLineHeightInPx } from "./textMeasurements";
 import {
   isTextElement,
@@ -545,6 +552,45 @@ const drawElementOnCanvas = (
     }
     default: {
       if (isTextElement(element)) {
+        const fillStyle =
+          renderConfig.theme === THEME.DARK
+            ? applyDarkModeFilter(element.strokeColor)
+            : element.strokeColor;
+
+        if (isLatexTextMode(getTextMode(element))) {
+          const rendered = renderLatexToSvg(
+            element.originalText || element.text,
+            element.fontSize,
+          );
+
+          if (rendered) {
+            const horizontalOffset =
+              element.textAlign === "center"
+                ? (element.width - rendered.width) / 2
+                : element.textAlign === "right"
+                ? element.width - rendered.width
+                : 0;
+            const contentInsetY = getLatexContentInsetY(element.fontSize);
+            const contentHeight = rendered.height + contentInsetY * 2;
+            const verticalOffset =
+              element.verticalAlign === "middle"
+                ? (element.height - contentHeight) / 2 + contentInsetY
+                : element.verticalAlign === "bottom"
+                ? element.height - contentHeight + contentInsetY
+                : contentInsetY;
+
+            if (
+              drawLatexSvgToCanvas(context, rendered, {
+                color: fillStyle,
+                x: horizontalOffset,
+                y: verticalOffset,
+              })
+            ) {
+              break;
+            }
+          }
+        }
+
         const rtl = isRTL(element.text);
         const shouldTemporarilyAttach = rtl && !context.canvas.isConnected;
         if (shouldTemporarilyAttach) {
@@ -555,10 +601,7 @@ const drawElementOnCanvas = (
         context.canvas.setAttribute("dir", rtl ? "rtl" : "ltr");
         context.save();
         context.font = getFontString(element);
-        context.fillStyle =
-          renderConfig.theme === THEME.DARK
-            ? applyDarkModeFilter(element.strokeColor)
-            : element.strokeColor;
+        context.fillStyle = fillStyle;
         context.textAlign = element.textAlign as CanvasTextAlign;
 
         // Canvas does not support multiline text by default

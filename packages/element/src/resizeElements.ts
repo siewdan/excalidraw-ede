@@ -47,6 +47,7 @@ import {
   getApproxMinLineWidth,
   getApproxMinLineHeight,
 } from "./textMeasurements";
+import { getTextMode, isLatexTextMode } from "./latex";
 import { wrapText } from "./textWrapping";
 import {
   isArrowElement,
@@ -361,15 +362,18 @@ export const resizeSingleTextElement = (
 
     const newWidth = Math.max(minWidth, nextWidth);
 
-    const text = wrapText(
-      element.originalText,
-      getFontString(element),
-      Math.abs(newWidth),
-    );
+    const text = isLatexTextMode(getTextMode(element))
+      ? element.originalText
+      : wrapText(
+          element.originalText,
+          getFontString(element),
+          Math.abs(newWidth),
+        );
     const metrics = measureText(
       text,
       getFontString(element),
       element.lineHeight,
+      getTextMode(element),
     );
 
     const newHeight = metrics.height;

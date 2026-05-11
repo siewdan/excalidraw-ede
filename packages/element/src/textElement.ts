@@ -20,6 +20,7 @@ import {
   resetOriginalContainerCache,
   updateOriginalContainerCache,
 } from "./containerCache";
+import { getTextMode, isLatexTextMode } from "./latex";
 import { LinearElementEditor } from "./linearElementEditor";
 
 import { measureText } from "./textMeasurements";
@@ -74,7 +75,10 @@ export const redrawTextBoundingBox = (
 
   boundTextUpdates.text = textElement.text;
 
-  if (container || !textElement.autoResize) {
+  if (
+    !isLatexTextMode(getTextMode(textElement)) &&
+    (container || !textElement.autoResize)
+  ) {
     maxWidth = container
       ? getBoundTextMaxWidth(container, textElement)
       : textElement.width;
@@ -89,6 +93,7 @@ export const redrawTextBoundingBox = (
     boundTextUpdates.text,
     getFontString(textElement),
     textElement.lineHeight,
+    getTextMode(textElement),
   );
 
   // Note: only update width for unwrapped text and bound texts (which always have autoResize set to true)
@@ -167,7 +172,7 @@ export const handleBindTextResize = (
       shouldMaintainAspectRatio ||
       (transformHandleType !== "n" && transformHandleType !== "s")
     ) {
-      if (text) {
+      if (text && !isLatexTextMode(getTextMode(textElement))) {
         text = wrapText(
           textElement.originalText,
           getFontString(textElement),
@@ -178,6 +183,7 @@ export const handleBindTextResize = (
         text,
         getFontString(textElement),
         textElement.lineHeight,
+        getTextMode(textElement),
       );
       nextHeight = metrics.height;
       nextWidth = metrics.width;

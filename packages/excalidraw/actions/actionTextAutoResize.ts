@@ -1,7 +1,7 @@
 import { getFontString } from "@excalidraw/common";
 
 import { isExcalidrawElement, newElementWith } from "@excalidraw/element";
-import { measureText } from "@excalidraw/element";
+import { getTextMode, measureText } from "@excalidraw/element";
 
 import { isTextElement } from "@excalidraw/element";
 
@@ -42,6 +42,7 @@ export const actionTextAutoResize = register({
             element.originalText,
             getFontString(element),
             element.lineHeight,
+            getTextMode(element),
           );
 
           return newElementWith(element, {

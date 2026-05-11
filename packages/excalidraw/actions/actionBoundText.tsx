@@ -28,7 +28,7 @@ import {
   isUsingAdaptiveRadius,
 } from "@excalidraw/element";
 
-import { measureText } from "@excalidraw/element";
+import { getTextMode, measureText } from "@excalidraw/element";
 
 import { syncMovedIndices } from "@excalidraw/element";
 
@@ -70,6 +70,7 @@ export const actionUnbindText = register({
           boundTextElement.originalText,
           getFontString(boundTextElement),
           boundTextElement.lineHeight,
+          getTextMode(boundTextElement),
         );
         const originalContainerHeight = getOriginalContainerHeightFromCache(
           element.id,

@@ -96,7 +96,9 @@ const getHints = ({
   }
 
   if (activeTool.type === "text") {
-    return t("hints.text");
+    return t("hints.text", {
+      shortcut: getTaggedShortcutKey("CtrlOrCmd"),
+    });
   }
 
   if (activeTool.type === "embeddable") {

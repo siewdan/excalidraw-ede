@@ -38,12 +38,21 @@ import {
   mockBoundingClientRect,
   restoreOriginalGetBoundingClientRect,
 } from "../tests/test-utils";
-import { actionBindText } from "../actions";
+import { actionBindText, actionChangeTextMode } from "../actions";
 
 unmountComponent();
 
 const tab = "    ";
 const mouse = new Pointer("mouse");
+
+const pressCtrlOrCmdKey = () => {
+  const key = KEYS.CTRL_OR_CMD === "metaKey" ? "Meta" : "Control";
+  const modifier =
+    KEYS.CTRL_OR_CMD === "metaKey" ? { metaKey: true } : { ctrlKey: true };
+
+  fireEvent.keyDown(document, { key, ...modifier });
+  fireEvent.keyUp(document, { key });
+};
 
 const exitTextEditorAndAssertSelection = async ({
   editor,
@@ -233,6 +242,71 @@ describe("textWysiwyg", () => {
       expect(editor).not.toBe(null);
       expect(h.state.editingTextElement?.id).toBe(text.id);
       expect(h.elements.length).toBe(1);
+    });
+
+    it("should preserve LaTeX mode changed while editing text with text tool", async () => {
+      const text = API.createElement({
+        type: "text",
+        text: "\\frac{a}{b}",
+        originalText: "\\frac{a}{b}",
+        x: 60,
+        y: 0,
+        width: 100,
+        height: 100,
+      });
+
+      API.setElements([text]);
+      UI.clickTool("text");
+
+      mouse.clickAt(text.x + 50, text.y + 50);
+
+      const editor = await getTextEditor();
+
+      expect(editor).not.toBe(null);
+      expect(h.state.editingTextElement?.id).toBe(text.id);
+
+      act(() => {
+        h.app.actionManager.executeAction(actionChangeTextMode, "ui", "math");
+      });
+
+      Keyboard.exitTextEditor(editor!);
+
+      const updatedText = h.elements[0] as ExcalidrawTextElement;
+      expect(updatedText.textMode).toBe("latex");
+      expect(updatedText.originalText).toBe("$\\frac{a}{b}$");
+      expect(updatedText.text).toBe("$\\frac{a}{b}$");
+    });
+
+    it("should cycle new text LaTeX mode with Ctrl/Cmd while text tool is active", async () => {
+      UI.clickTool("text");
+
+      expect(h.state.currentItemLatexMode).toBe("off");
+
+      pressCtrlOrCmdKey();
+      expect(h.state.currentItemLatexMode).toBe("on");
+
+      pressCtrlOrCmdKey();
+      expect(h.state.currentItemLatexMode).toBe("math");
+
+      pressCtrlOrCmdKey();
+      expect(h.state.currentItemLatexMode).toBe("off");
+
+      pressCtrlOrCmdKey();
+      pressCtrlOrCmdKey();
+      expect(h.state.currentItemLatexMode).toBe("math");
+
+      mouse.clickAt(120, 80);
+
+      const editor = await getTextEditor();
+      expect(editor).not.toBe(null);
+      expect(h.state.currentItemLatexMode).toBe("math");
+
+      updateTextEditor(editor!, "\\frac{a}{b}");
+      Keyboard.exitTextEditor(editor!);
+
+      const text = h.elements[0] as ExcalidrawTextElement;
+      expect(text.textMode).toBe("latex");
+      expect(text.originalText).toBe("$\\frac{a}{b}$");
     });
 
     it("should vertically center newly created text on the cursor when clicked with text tool", async () => {
