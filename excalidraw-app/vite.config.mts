@@ -114,6 +114,10 @@ export default defineConfig(({ mode }) => {
               return "mermaid-to-excalidraw";
             }
 
+            if (id.includes("mathjax-full")) {
+              return "mathjax.chunk";
+            }
+
             if (id.includes("@codemirror/") || id.includes("@lezer/")) {
               return "codemirror.chunk";
             }
